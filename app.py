@@ -16,183 +16,159 @@ if 'game' not in st.session_state:
 # Initialize session state variables
 if 'current_player' not in st.session_state:
     st.session_state.current_player = ""
-if 'show_admin' not in st.session_state:
-    st.session_state.show_admin = False
+if 'current_game_id' not in st.session_state:
+    st.session_state.current_game_id = ""
 
 def main():
     st.title("🎭 Juego de Adivinanzas Multijugador")
-    st.markdown("---")
     
-    # Sidebar for game controls
-    with st.sidebar:
-        st.header("🎮 Controles del Juego")
-        
-        # Player name input
-        player_name = st.text_input("Tu nombre:", value=st.session_state.current_player)
-        
-        if st.button("Unirse al Juego"):
-            if player_name:
-                if st.session_state.game.add_player(player_name):
-                    st.session_state.current_player = player_name
-                    st.success(f"¡Bienvenido {player_name}!")
-                    st.rerun()
+    # Game connection section at the top
+    st.header("🔗 Conexión al Juego")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        game_id_input = st.text_input(
+            "ID del Juego (para unirse a un juego existente):",
+            value=st.session_state.current_game_id,
+            placeholder="Ej: ABC123",
+            help="Deja vacío para crear un nuevo juego"
+        )
+    
+    with col2:
+        player_name_input = st.text_input(
+            "Tu Nombre:",
+            value=st.session_state.current_player,
+            placeholder="Ingresa tu nombre"
+        ).upper()
+    
+    # Connection buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🎮 Unirse/Crear Juego", type="primary"):
+            if player_name_input:
+                if game_id_input:
+                    # Try to join existing game
+                    if st.session_state.game.get_game(game_id_input.upper()):
+                        st.session_state.current_game_id = game_id_input.upper()
+                        st.session_state.game.set_current_game(game_id_input.upper())
+                        
+                        # Add player to the game
+                        if st.session_state.game.add_player(player_name_input, game_id_input.upper()):
+                            st.session_state.current_player = player_name_input
+                            st.success(f"¡Te has unido al juego {game_id_input.upper()}!")
+                        else:
+                            if st.session_state.game.player_exists_in_game(player_name_input, game_id_input.upper()):
+                                st.session_state.current_player = player_name_input
+                                st.success(f"¡Bienvenido de vuelta, {player_name_input}!")
+                            else:
+                                st.error("No se pudo unir al juego. El nombre puede estar en uso.")
+                        st.rerun()
+                    else:
+                        st.error(f"No se encontró el juego con ID: {game_id_input.upper()}")
                 else:
-                    st.warning("Este nombre ya está en uso o es inválido")
+                    # Create new game
+                    new_game_id = st.session_state.game.create_new_game()
+                    st.session_state.current_game_id = new_game_id
+                    st.session_state.game.add_player(player_name_input, new_game_id)
+                    st.session_state.current_player = player_name_input
+                    st.success(f"¡Nuevo juego creado! ID: {new_game_id}")
+                    st.rerun()
             else:
                 st.error("Por favor ingresa tu nombre")
+    
+    with col2:
+        if st.button("🔄 Actualizar Conexión"):
+            if st.session_state.current_game_id and st.session_state.current_player:
+                st.session_state.game.set_current_game(st.session_state.current_game_id)
+                st.success("Conexión actualizada")
+                st.rerun()
+    
+    with col3:
+        if st.button("🚪 Salir del Juego"):
+            if st.session_state.current_game_id and st.session_state.current_player:
+                st.session_state.game.remove_player(st.session_state.current_player, st.session_state.current_game_id)
+            st.session_state.current_player = ""
+            st.session_state.current_game_id = ""
+            st.success("Has salido del juego")
+            st.rerun()
+    
+    # Game controls
+    if st.session_state.current_game_id:
+        st.subheader("Controles del Juego")
         
-        # Show current players
-        if st.session_state.game.players:
-            st.subheader("👥 Jugadores Conectados")
-            for i, player in enumerate(st.session_state.game.players, 1):
-                st.write(f"{i}. {player}")
+        control_col1, control_col2 = st.columns(2)
         
-        st.markdown("---")
-        
-        # Game controls
-        if len(st.session_state.game.players) >= 2:
-            if st.button("🚀 Iniciar Juego", type="primary"):
-                if st.session_state.game.start_game():
-                    st.success("¡Juego iniciado!")
+        with control_col1:
+            if st.button("🎮 Iniciar Nuevo Juego"):
+                if st.session_state.game.start_game(st.session_state.current_game_id):
+                    st.success("¡Juego iniciado! Se han asignado personajes y contextos.")
                     st.rerun()
                 else:
-                    st.error("Error al iniciar el juego")
-        else:
-            st.info("Se necesitan al menos 2 jugadores para iniciar")
+                    st.error("No se pudo iniciar el juego. Se necesitan al menos 2 jugadores.")
         
-        if st.session_state.game.is_game_active():
+        with control_col2:
             if st.button("🔄 Reiniciar Juego"):
-                st.session_state.game.reset_game()
-                st.session_state.current_player = ""
-                st.success("Juego reiniciado")
-                st.rerun()
-        
-        # Admin toggle
-        st.markdown("---")
-        if st.checkbox("👑 Vista de Administrador"):
-            st.session_state.show_admin = True
-        else:
-            st.session_state.show_admin = False
+                # do you really want to reset the game? yes or no
+                st.warning("⚠️ ¡Advertencia! Esto eliminará todos los jugadores y reiniciará el juego.")
+                st.info("¿Estás seguro de que deseas reiniciar el juego?")
+                if st.button("Confirmar Reinicio"):
+                    st.session_state.game.reset_game(st.session_state.current_game_id)
+                    st.success("Juego reiniciado. Todos los jugadores han sido eliminados.")
+                    st.rerun()
+                if st.button("Cancelar"):
+                    st.info("Reinicio del juego cancelado.")
+                    st.rerun()
     
-    # Main game area
-    if not st.session_state.game.is_game_active():
-        st.info("🎯 **Instrucciones del Juego:**")
-        st.markdown("""
-        1. **Cada jugador** debe unirse al juego ingresando su nombre
-        2. **Objetivo:** Adivinar tu propio PERSONAJE y CONTEXTO
-        3. **Regla:** Puedes ver la información de todos los demás jugadores, pero NO la tuya
-        4. **Estrategia:** Haz preguntas a los otros jugadores para descubrir tu identidad
-        5. **Ganador:** El primero en adivinar correctamente su PERSONAJE y CONTEXTO
-        """)
+    # Game status and information
+    if st.session_state.current_game_id and st.session_state.current_player:
+        st.header(f"🎲 Juego: {st.session_state.current_game_id}")
         
-        if len(st.session_state.game.players) >= 2:
-            st.success("✅ ¡Listos para jugar! Haz clic en 'Iniciar Juego' en la barra lateral.")
-        else:
-            st.warning(f"⏳ Esperando jugadores... ({len(st.session_state.game.players)}/2 mínimo)")
-    
-    else:
-        # Game is active
-        if st.session_state.show_admin:
-            show_admin_view()
-        elif st.session_state.current_player:
-            show_player_view()
-        else:
-            st.warning("⚠️ Por favor ingresa tu nombre y únete al juego para ver tu vista personalizada")
-
-def show_player_view():
-    """Show the game view for a specific player"""
-    current_player = st.session_state.current_player
-    
-    if current_player not in st.session_state.game.players:
-        st.error("❌ No estás registrado en este juego. Por favor únete primero.")
-        return
-    
-    st.header(f"🎭 Vista de {current_player}")
-    st.markdown("### 📋 Información de otros jugadores:")
-    st.info("💡 **Recuerda:** No puedes ver tu propia información. ¡Pregunta a los demás para descubrirla!")
-    
-    # Get visible data for current player
-    visible_data = st.session_state.game.get_visible_data_for_player(current_player)
-    
-    if visible_data:
-        # Create DataFrame and display as table
-        df = pd.DataFrame(visible_data)
+        # Display connected players
+        players = st.session_state.game.get_players(st.session_state.current_game_id)
+        st.subheader("👥 Jugadores Conectados")
+        st.write(", ".join(players))
         
-        # Style the table
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "JUGADOR": st.column_config.TextColumn("👤 JUGADOR", width="medium"),
-                "PERSONAJE": st.column_config.TextColumn("🎭 PERSONAJE", width="medium"),
-                "CONTEXTO": st.column_config.TextColumn("🎬 CONTEXTO", width="large")
-            }
-        )
-        
-        st.markdown("---")
-        st.markdown("### 🤔 ¿Ya sabes quién eres?")
-        
-        # Guessing section
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            guess_personaje = st.text_input("Tu PERSONAJE:")
-        
-        with col2:
-            guess_contexto = st.text_input("Tu CONTEXTO:")
-        
-        if st.button("🎯 Verificar Respuesta"):
-            player_assignment = st.session_state.game.get_player_assignment(current_player)
+        # Game activity
+        if st.session_state.game.is_game_active(st.session_state.current_game_id):
+            st.success("✅ El juego está activo")
             
-            if (guess_personaje.strip().lower() == player_assignment['personaje'].lower() and 
-                guess_contexto.strip().lower() == player_assignment['contexto'].lower()):
-                st.balloons()
-                st.success(f"🎉 ¡CORRECTO! {current_player} ha ganado!")
-                st.success(f"Eras: **{player_assignment['personaje']}** en **{player_assignment['contexto']}**")
+            # Player's assignment - hidden since players need to guess their own character and context
+            st.subheader("🎭 Tu Misión")
+            st.info("¡Adivina tu personaje y contexto formulando preguntas de sí/no al resto de jugadores!")
+            
+            # Table of other players (visible to current player)
+            st.subheader("📋 Tabla de Juego")
+            visible_data = st.session_state.game.get_visible_data_for_player(st.session_state.current_player, st.session_state.current_game_id)
+            
+            if visible_data:
+                df = pd.DataFrame(visible_data)
+                st.dataframe(df, width='stretch', hide_index=True)
             else:
-                st.error("❌ Incorrecto. ¡Sigue preguntando a los demás!")
-                
-                # Show hints
-                if guess_personaje.strip().lower() == player_assignment['personaje'].lower():
-                    st.info("✅ El PERSONAJE es correcto")
-                if guess_contexto.strip().lower() == player_assignment['contexto'].lower():
-                    st.info("✅ El CONTEXTO es correcto")
-    
+                st.info("No hay datos para mostrar en la tabla")
+        else:
+            st.warning("⏳ El juego aún no ha comenzado")
+            st.info("Espera a que se inicie el juego para recibir tu personaje y contexto")
     else:
-        st.warning("⏳ Esperando que se unan más jugadores...")
+        st.info("🎯 Ingresa un ID de juego para unirte o deja el campo vacío para crear uno nuevo")
+    
+    # Instructions
+    with st.expander("📝 Instrucciones del Juego"):
+        st.markdown("""
+        ### Cómo Jugar
+        1. **Unirse al Juego**: Ingresa tu nombre y un ID de juego existente, o crea uno nuevo.
+        2. **Iniciar el Juego**: Cualquier jugador puede iniciar el juego cuando haya al menos 2 jugadores.
+        3. **Adivinar**: Cada jugador recibe un personaje y un contexto. ¡Debes adivinar quién eres basándote en cómo te tratan los demás!
+        4. **Interactuar**: Habla con los demás jugadores tratándolos según su personaje y contexto.
+        
+        ### Consejos
+        - No reveles directamente el personaje o contexto de otro jugador
+        - Haz preguntas indirectas para obtener pistas sobre tu personaje
+        - ¡Diviértete interpretando tu papel mientras interactúas con los demás!
+        """)
 
-def show_admin_view():
-    """Show admin view with all assignments"""
-    st.header("👑 Vista de Administrador")
-    st.warning("⚠️ Esta vista muestra toda la información del juego. ¡No hagas trampa!")
-    
-    assignments = st.session_state.game.get_all_assignments()
-    
-    if assignments:
-        # Create complete DataFrame
-        admin_data = []
-        for player, assignment in assignments.items():
-            admin_data.append({
-                'JUGADOR': player,
-                'PERSONAJE': assignment['personaje'],
-                'CONTEXTO': assignment['contexto']
-            })
-        
-        df = pd.DataFrame(admin_data)
-        
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "JUGADOR": st.column_config.TextColumn("👤 JUGADOR", width="medium"),
-                "PERSONAJE": st.column_config.TextColumn("🎭 PERSONAJE", width="medium"),
-                "CONTEXTO": st.column_config.TextColumn("🎬 CONTEXTO", width="large")
-            }
-        )
-    else:
-        st.info("No hay asignaciones activas")
+
 
 if __name__ == "__main__":
     main()
