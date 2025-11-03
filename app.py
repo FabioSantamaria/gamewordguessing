@@ -81,8 +81,13 @@ def main():
     with col2:
         if st.button("🔄 Actualizar Conexión"):
             if st.session_state.current_game_id and st.session_state.current_player:
-                st.session_state.game.set_current_game(st.session_state.current_game_id)
-                st.success("Conexión actualizada")
+                # Reload the game data from JSON file
+                if st.session_state.game.reload_game_from_json(st.session_state.current_game_id):
+                    st.session_state.game.set_current_game(st.session_state.current_game_id)
+                    st.success("Datos del juego actualizados desde archivo")
+                else:
+                    st.session_state.game.set_current_game(st.session_state.current_game_id)
+                    st.warning("No se encontró archivo de juego, usando datos en memoria")
                 st.rerun()
     
     with col3:

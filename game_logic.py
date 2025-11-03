@@ -234,6 +234,24 @@ class GameLogic:
         except Exception as e:
             print(f"Error saving game to JSON: {e}")
             return False
+            
+    def reload_game_from_json(self, game_id: str) -> bool:
+        """Reload a specific game from its JSON file"""
+        if not game_id:
+            return False
+            
+        json_file_path = os.path.join(self.json_dir, f"{game_id}.json")
+        
+        try:
+            if os.path.exists(json_file_path):
+                with open(json_file_path, 'r', encoding='utf-8') as f:
+                    game_data = json.load(f)
+                    self.games[game_id] = game_data
+                return True
+            return False
+        except Exception as e:
+            print(f"Error reloading game from JSON: {e}")
+            return False
     
     def load_games_from_json(self):
         """Load all saved games from JSON files"""
