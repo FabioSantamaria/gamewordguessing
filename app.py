@@ -88,6 +88,7 @@ def main():
                 else:
                     st.session_state.game.set_current_game(st.session_state.current_game_id)
                     st.warning("No se encontró archivo de juego, usando datos en memoria")
+                st.session_state.game.start_game(st.session_state.current_game_id)
                 st.rerun()
     
     with col3:
@@ -164,13 +165,13 @@ def main():
         ### Cómo Jugar
         1. **Unirse al Juego**: Ingresa tu nombre y un ID de juego existente, o crea uno nuevo.
         2. **Iniciar el Juego**: Cualquier jugador puede iniciar el juego cuando haya al menos 2 jugadores.
-        3. **Adivinar**: Cada jugador recibe un personaje y un contexto. ¡Debes adivinar quién eres basándote en cómo te tratan los demás!
-        4. **Interactuar**: Habla con los demás jugadores tratándolos según su personaje y contexto.
+        3. **Adivinar**: Cada jugador recibe un personaje y un contexto. ¡Debes adivinar quién eres basándote en las respuestas de los demás!
+        4. **Interactuar**: En tu turno, haz preguntas de sí / no para interactuar con los demás jugadores.
         
         ### Consejos
         - No reveles directamente el personaje o contexto de otro jugador
         - Haz preguntas indirectas para obtener pistas sobre tu personaje
-        - ¡Diviértete interpretando tu papel mientras interactúas con los demás!
+        - ¡Diviértete interpretando mientras interactúas con los demás!
         """)
 
 
