@@ -88,7 +88,6 @@ def main():
                 else:
                     st.session_state.game.set_current_game(st.session_state.current_game_id)
                     st.warning("No se encontró archivo de juego, usando datos en memoria")
-                st.session_state.game.start_game(st.session_state.current_game_id)
                 st.rerun()
     
     with col3:
