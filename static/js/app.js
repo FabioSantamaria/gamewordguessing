@@ -94,21 +94,6 @@ function showLoginScreen() {
     currentPlayerName = null;
 }
 
-async function leaveGame() {
-    if (!currentGameId || !currentPlayerName) return;
-    
-    try {
-        await fetch(`/api/games/${currentGameId}/leave`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ player_name: currentPlayerName })
-        });
-    } catch (e) {
-        console.error(e);
-    }
-    showLoginScreen();
-}
-
 async function startGame() {
     if (!currentGameId) return;
     try {
@@ -135,8 +120,11 @@ function stopPolling() {
 async function updateGameState() {
     if (!currentGameId || !currentPlayerName) return;
 
+    // We can rely on session now if desired, but sending query param is safe fallback
     try {
-        const res = await fetch(`/api/games/${currentGameId}/status?player_name=${encodeURIComponent(currentPlayerName)}`);
+        const res = await fetch(`/api/games/${currentGameId}/status?player_name=${encodeURIComponent(currentPlayerName)}`, {
+            cache: "no-store"
+        });
         
         if (res.status === 404) {
             // Game deleted?

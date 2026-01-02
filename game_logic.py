@@ -127,8 +127,6 @@ class GameLogic:
         
         game_data = self.games[target_game_id]
         visible_data = []
-
-        print(game_data)
         
         for player in game_data['players']:
             if player != current_player and player in game_data['assignments']:
@@ -138,8 +136,6 @@ class GameLogic:
                     'CONTEXTO': game_data['assignments'][player]['contexto']
                 })
         
-        print(visible_data)
-
         return visible_data
     
     def get_player_assignment(self, player_name: str, game_id: str = None) -> Dict:
