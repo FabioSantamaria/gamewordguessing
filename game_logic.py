@@ -1,7 +1,6 @@
 import random
 import os
 import string
-import json
 from typing import List, Dict, Tuple, Optional
 
 class GameLogic:
@@ -11,19 +10,13 @@ class GameLogic:
         self.personajes = []
         self.contextos = []
         self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-        self.json_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game_data")
         
-        # Create game_data directory if it doesn't exist
-        if not os.path.exists(self.json_dir):
-            os.makedirs(self.json_dir)
-            
         self.load_data()
-        self.load_games_from_json()
     
     def generate_game_id(self) -> str:
-        """Generate a unique 6-character game ID"""
+        """Generate a unique 3-character game ID"""
         while True:
-            game_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            game_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
             if game_id not in self.games:
                 return game_id
     
@@ -37,7 +30,6 @@ class GameLogic:
             'active': False
         }
         self.current_game_id = game_id
-        self.save_game_to_json(game_id)
         return game_id
     
     def get_game(self, game_id: str) -> Optional[Dict]:
@@ -82,22 +74,6 @@ class GameLogic:
         game_data = self.games[target_game_id]
         if player_name and player_name not in game_data['players']:
             game_data['players'].append(player_name)
-            self.save_game_to_json(target_game_id)
-            return True
-        return False
-    
-    def remove_player(self, player_name: str, game_id: str = None) -> bool:
-        """Remove a player from the specified game"""
-        target_game_id = game_id or self.current_game_id
-        if not target_game_id or target_game_id not in self.games:
-            return False
-        
-        game_data = self.games[target_game_id]
-        if player_name in game_data['players']:
-            game_data['players'].remove(player_name)
-            if player_name in game_data['assignments']:
-                del game_data['assignments'][player_name]
-            self.save_game_to_json(target_game_id)
             return True
         return False
     
@@ -141,7 +117,6 @@ class GameLogic:
             }
         
         game_data['active'] = True
-        self.save_game_to_json(target_game_id)
         return True
     
     def get_visible_data_for_player(self, current_player: str, game_id: str = None) -> List[Dict]:
@@ -152,6 +127,8 @@ class GameLogic:
         
         game_data = self.games[target_game_id]
         visible_data = []
+
+        print(game_data)
         
         for player in game_data['players']:
             if player != current_player and player in game_data['assignments']:
@@ -161,6 +138,8 @@ class GameLogic:
                     'CONTEXTO': game_data['assignments'][player]['contexto']
                 })
         
+        print(visible_data)
+
         return visible_data
     
     def get_player_assignment(self, player_name: str, game_id: str = None) -> Dict:
@@ -180,18 +159,6 @@ class GameLogic:
         
         game_data = self.games[target_game_id]
         return game_data.get('active', False) and len(game_data.get('assignments', {})) > 0
-    
-    def reset_game(self, game_id: str = None):
-        """Reset the specified game state"""
-        target_game_id = game_id or self.current_game_id
-        if target_game_id and target_game_id in self.games:
-            self.games[target_game_id] = {
-                'players': [],
-                'assignments': {},
-                'created_at': None,
-                'active': False
-            }
-            self.save_game_to_json(target_game_id)
     
     def get_all_assignments(self, game_id: str = None) -> Dict:
         """Get all assignments for the specified game"""
@@ -218,54 +185,3 @@ class GameLogic:
         
         game_data = self.games[game_id]
         return player_name in game_data['players']
-        
-    def save_game_to_json(self, game_id: str):
-        """Save a specific game to a JSON file"""
-        if game_id not in self.games:
-            return False
-        
-        game_data = self.games[game_id]
-        json_file_path = os.path.join(self.json_dir, f"{game_id}.json")
-        
-        try:
-            with open(json_file_path, 'w', encoding='utf-8') as f:
-                json.dump(game_data, f, ensure_ascii=False, indent=4)
-            return True
-        except Exception as e:
-            print(f"Error saving game to JSON: {e}")
-            return False
-            
-    def reload_game_from_json(self, game_id: str) -> bool:
-        """Reload a specific game from its JSON file"""
-        if not game_id:
-            return False
-            
-        json_file_path = os.path.join(self.json_dir, f"{game_id}.json")
-        
-        try:
-            if os.path.exists(json_file_path):
-                with open(json_file_path, 'r', encoding='utf-8') as f:
-                    game_data = json.load(f)
-                    self.games[game_id] = game_data
-                return True
-            return False
-        except Exception as e:
-            print(f"Error reloading game from JSON: {e}")
-            return False
-    
-    def load_games_from_json(self):
-        """Load all saved games from JSON files"""
-        if not os.path.exists(self.json_dir):
-            return
-        
-        try:
-            for filename in os.listdir(self.json_dir):
-                if filename.endswith('.json'):
-                    game_id = filename[:-5]  # Remove .json extension
-                    json_file_path = os.path.join(self.json_dir, filename)
-                    
-                    with open(json_file_path, 'r', encoding='utf-8') as f:
-                        game_data = json.load(f)
-                        self.games[game_id] = game_data
-        except Exception as e:
-            print(f"Error loading games from JSON: {e}")
